@@ -23,7 +23,7 @@ module reset_sync #(
         end
     end
 
-   // Drive rst_n from MSB
+   //w Drive rst_n from MSB
    assign rst_n = sync_ff[STAGES - 1];
 
    

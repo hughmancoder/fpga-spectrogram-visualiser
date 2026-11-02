@@ -1,5 +1,10 @@
 `default_nettype none
 
+// Sweeps across each 1650x750 frame at the pixel clock rate (74.25 MHz) to:
+//   1. Output the current visible screen coordinates (pixel_x, pixel_y).
+//   2. Assert Data Enable (de = 1) inside the 1280x720 active video region.
+//   3. Generate horizontal and vertical sync pulses (hsync, vsync) during
+//      blanking intervals so the monitor can align each row and frame.
 
 module video_sync #(
     // 1280x720 @ 60Hz settings
@@ -20,7 +25,7 @@ module video_sync #(
     input  wire rst_n,
     output reg  hsync,
     output reg  vsync,
-    output reg  de,
+    output reg  data_enable,
     output reg  [11:0] pixel_x,
     output reg  [11:0] pixel_y
 );
@@ -28,8 +33,18 @@ module video_sync #(
     localparam H_TOTAL = H_ACTIVE + H_FRONT_PORCH + H_SYNC_PULSE + H_BACK_PORCH;
     localparam V_TOTAL = V_ACTIVE + V_FRONT_PORCH + V_SYNC_PULSE + V_BACK_PORCH;
 
-    reg [11:0] h_count;
-    reg [11:0] v_count;
+    reg [11:0] h_count = 12'd0;
+    reg [11:0] v_count = 12'd0;
+
+    initial begin
+        h_count = 12'd0;
+        v_count = 12'd0;
+        hsync   = ~H_POLARITY;
+        vsync   = ~V_POLARITY;
+        data_enable      = 1'b0;
+        pixel_x = 12'd0;
+        pixel_y = 12'd0;
+    end
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -53,7 +68,7 @@ module video_sync #(
         if (!rst_n) begin
             hsync <= ~H_POLARITY;
             vsync <= ~V_POLARITY;
-            de    <= 0;
+            data_enable    <= 0;
             pixel_x <= 0;
             pixel_y <= 0;
         end else begin
@@ -71,9 +86,9 @@ module video_sync #(
 
             // DE generation
             if (h_count < H_ACTIVE && v_count < V_ACTIVE)
-                de <= 1'b1;
+                data_enable <= 1'b1;
             else
-                de <= 1'b0;
+                data_enable <= 1'b0;
 
             // Coordinates
             if (h_count < H_ACTIVE)

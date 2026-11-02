@@ -4,7 +4,7 @@
 TMDS Encoder (Transition Minimised Differential Signaling).
 
 Implemented from gowin user guide
-Refer to Gowin DVI TX RX IP guide chapter 3
+Refer to Gowin DVI TX RX IP guide 
 
 This module implements the standard DVI 1.0 / HDMI TMDS encoding algorithm.
 It takes 8-bit parallel color data (Red, Green, or Blue) and encodes it into 
@@ -92,10 +92,7 @@ module tmds_encoder (
                     end
                 end
             end else begin
-                // Control periods
-                // Note: The Gowin DVI spec writes the sequence as q_out[0:9] (transmission order left-to-right).
-                // In Verilog, we assign to tmds_out[9:0] (MSB left, LSB right). 
-                // Since tmds_out[0] is transmitted first, we MUST reverse the binary strings from the spec
+
                 case (ctrl_in)
                     2'b00: tmds_out <= 10'b1101010100;
                     2'b01: tmds_out <= 10'b0010101011;

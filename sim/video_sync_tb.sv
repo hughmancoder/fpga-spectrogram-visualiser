@@ -16,7 +16,7 @@ module video_sync_tb;
         .rst_n(rst_n),
         .hsync(hsync),
         .vsync(vsync),
-        .de(de),
+        .data_enable(de),
         .pixel_x(pixel_x),
         .pixel_y(pixel_y)
     );

@@ -1,23 +1,23 @@
-# Spectrogram 
+# FPGA Spectrum Analyser
+### Work in Progress
+Built for the Tang Nano 20K FPGA development board.
 
-Instantaneous Spectrum Analser
-Built for the Tang Nano 20K FPGA development board. 
+![Display Driver Demo](docs/images/display_driver.JPG)
 
-Work in Progress
-
-## Running
+## Getting Started
 
 **Flash to Tang Nano 20K**
-  ```bash
-  # flash volatile sram memory
-  make flash-sram
-  # flash nonvolatile memory
-  make flash
-  ```
+
+```bash
+# flash volatile sram memory
+make flash-sram
+# flash nonvolatile memory
+make flash
+```
 
 **run isolated builds**
 ```bash
-~/oss-cad-suite/bin/yosys -p "read_verilog -sv src/[FILE_NAME].sv"
+~/oss-cad-suite/bin/yosys -p "read_verilog -sv [FILE_NAME].sv"
 ```
 
 **Simulation**
@@ -26,12 +26,12 @@ Work in Progress
 make sim
 
 # Run a specific testbench 
-make sim TB=pll_pixel_tb
-make sim TB=sim/top_tb.v
+make sim TB=hdmi_clock_gen_tb
+make sim TB=top_tb
 
 # View simulation waveforms in GTKWave / Surfer
 make waves
-make waves TB=pll_pixel_tb
+make waves TB=hdmi_clock_gen_tb
 ```
 
 **Clean Build Files**
@@ -53,41 +53,57 @@ make check-tools
 make setup-toolchain
 ```
 
-## Microphone (i2c)
-
-SD = Serial Data
-
-MS = Word Select (WS / LRCK) - determines left or right channel
-
-CCK = Serial Clock (SCK / BCLK) - synchronises the bits
-
-L/R = Channel Select (Tie to GND for left, VDD for right)
-
-## Documentation 
-
-Refer to `docs/` folder
 
 ## Notes
 
-- **Pixel Clock** 74.25 MHz (for 1280×720 @ 60 Hz HDMI video)
-- **Serial Clock** 371.25 MHz (5× DDR for 10:1 TMDS bit serialization)
+### HDMI
+**TMDS encoding (Transition-Minimized Differential Signaling)**: a technology used to transmit high-speed digital video and audio data reliably over cables in interfaces like DVI and HDMI
+
+### Clock Domains
+- Pixel Clock:  74.25 MHz for pixel coordinates and RGB color values once per pixel
+1650 pixels wide×750 lines tall×60 frames/sec\=74,250,000 pixels/sec.
+
+- Serial Clock: 371.25 MHz for 10-bit TMDS encoded color data over HDMI pints.
+These clocks are genrated by the phase-locked loop
+
+An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for Blue. It only has 1 differential pair per color channel.To squeeze all 10 bits of a pixel's TMDS symbol down a single wire before the next pixel arrives, `hdmi_tx.sv` uses a hardware Parallel-to-Serial converter (`OSER10` — Output Serializer 10:1)
+
+
+### Coordinate Bit Widths & Resolution
+- Active Resolution: 1280 × 720 = 921,600 pixels (Total frame with blanking: 1650 × 750 = 1,237,500 pixels)
+- pixel_x [11:0]: 12-bit horizontal coordinate (2^11 = 2048 covers the 1280 active width and 1650 total line width; 12 bits [11:0] gives range 0..4095)
+- pixel_y [11:0]: 12-bit vertical coordinate (matched to pixel_x width for consistency)
+
+### Microphone (i2c)
+
+SD: Serial Data
+
+MS: Word Select (WS / LRCK) - determines left or right channel
+
+CCK: Serial Clock (SCK / BCLK) - synchronises the bits
+
+L/R: Channel Select (Tie to GND for left, VDD for right)
 
 ## Source Files
 
-**Clocking and Reset:**
-- `src/pll_pixel.sv` 
-- `src/reset_sync.sv` 
-- `src/cdc_sync.sv` 
+**Clocking and Reset**
+- reset_sync.sv
+- cdc_sync.sv
 
-**Video Pipeline:**
-- `src/video_sync.sv` 
-- `src/tmds_encoder.sv` 
-- `src/hdmi_tx.sv` 
+**Video Processing**
+- hdmi_clock_gen.sv: Generates pixel_clk (74.25 MHz) and serial_clk (371.25 MHz). Documented in [Gowin Clock User Guide](<docs/gowin/Gowin Clock User Guide.pdf>).
+- video_sync.sv: 720p60 raster timing generator.
+  - pixel_x, pixel_y: Current screen coordinates (0..1279, 0..719).
+  - de (Data Enable): High (1) inside the visible 1280 × 720 active area.
+  - hsync & vsync: Pulse high (1) during horizontal/vertical sync windows so the monitor can align each row and frame (used by hdmi_tx.sv).
+- tmds_encoder.sv: 8b/10b TMDS encoder implemented from [User Guide (Chapter 3)](<docs/gowin/User Guide.pdf>).
+- hdmi_tx.sv: Wraps the three TMDS encoders, OSER10 10:1 DDR serializers, and TLVDS_OBUF differential output buffers.
 
-**Top Level:**
-- `src/top.sv` 
+**Graphics**
+- bar_renderer.sv: Real-time 2-stage pipelined graphic equalizer bar renderer.
 
+**Supplementary**
+- spectrum_pattern_gen.sv: Synthetic animated bar heights for testing without audio input.
 
-1280 x 720 = 201 600
-Xbits: 2^11 = 2047 
-Ybits: Xbits for consitency
+**Top Level**
+- top.sv: Top-level FPGA module connecting clocking, timing, rendering, and HDMI output.

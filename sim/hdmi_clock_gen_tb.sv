@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module pll_pixel_tb;
+module hdmi_clock_gen_tb;
 
     reg clk_in = 0;
     reg rst = 0;
@@ -8,7 +8,7 @@ module pll_pixel_tb;
     wire serial_clk;
     wire locked;
 
-    pll_pixel uut (
+    hdmi_clock_gen uut (
         .clk_in     (clk_in),
         .rst        (rst),
         .pixel_clk  (pixel_clk),
@@ -23,8 +23,8 @@ module pll_pixel_tb;
     real freq_mhz;
 
     initial begin
-        $dumpfile("build/pll_pixel_tb.vcd");
-        $dumpvars(0, pll_pixel_tb);
+        $dumpfile("build/hdmi_clock_gen_tb.vcd");
+        $dumpvars(0, hdmi_clock_gen_tb);
 
     
         @(posedge pixel_clk);
@@ -33,10 +33,10 @@ module pll_pixel_tb;
         t_period = $realtime - t1;
         freq_mhz = 1000.0 / t_period;
 
-        $display("[pll_pixel_tb] Measured Clock Period: %0.3f ns", t_period);
-        $display("[pll_pixel_tb] Measured Frequency:    %0.2f MHz", freq_mhz);
+        $display("[hdmi_clock_gen_tb] Measured Clock Period: %0.3f ns", t_period);
+        $display("[hdmi_clock_gen_tb] Measured Frequency:    %0.2f MHz", freq_mhz);
 
-        // Exact value check (with standard floating-point tolerance epsilon)
+        // Exact value check 
         if (freq_mhz < 74.24 || freq_mhz > 74.26) begin
             $display("[FAIL] Frequency mismatch! Expected 74.25 MHz, got %0.3f MHz", freq_mhz);
             $finish(1);
@@ -45,14 +45,15 @@ module pll_pixel_tb;
         end
 
         #200;
-        $display("[pll_pixel_tb] Asserting reset...");
+        $display("[hdmi_clock_gen_tb] Asserting reset...");
         rst = 1'b1;
         #50;
         if (locked !== 1'b0) begin
             $display("[FAIL] Expected locked == 0 during reset, got %b", locked);
             $finish(1);
         end else begin
-            $display("[pll_pixel_tb] PASS: PLL locked went low during reset.");
+            $display("[hdmi_clock_gen_tb] PASS: PLL locked went low during reset.");
+            $display("ALL CHECKS PASSED");
         end
 
         $finish;

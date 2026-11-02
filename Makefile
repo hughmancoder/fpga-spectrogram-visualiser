@@ -29,7 +29,7 @@ TB_SRCS    := $(SIM_MODELS) $(PKG_SRCS) $(RTL_SRCS) $(TB_FILE)
 TB_PARAMS  ?=
 
 # Regression test list for `make test`
-TESTS      ?= video_sync_tb top_tb
+TESTS      ?= video_sync_tb hdmi_clock_gen_tb spectrum_pattern_gen_tb bar_renderer_tb top_tb
 
 BUILD_DIR  ?= build
 

@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module test_animator_tb;
+module spectrum_pattern_gen_tb;
 
     reg clk = 0;
     reg rst_n = 0;
@@ -13,7 +13,7 @@ module test_animator_tb;
     wire [7:0] write_data;
     wire       write_en;
 
-    test_animator #(
+    spectrum_pattern_gen #(
         .NUM_BARS(64),
         .BAR_HEIGHT_MAX(255),
         .DATA_WIDTH(8)
@@ -42,8 +42,8 @@ module test_animator_tb;
     end
 
     initial begin
-        $dumpfile("build/test_animator_tb.vcd");
-        $dumpvars(0, test_animator_tb);
+        $dumpfile("build/spectrum_pattern_gen_tb.vcd");
+        $dumpvars(0, spectrum_pattern_gen_tb);
 
         #20;
         rst_n = 1;
@@ -70,7 +70,7 @@ module test_animator_tb;
         end
 
         if (write_count == 5 * 64) begin
-            $display("[test_animator_tb] PASS: Total writes = %0d (expected %0d)", write_count, 5 * 64);
+            $display("[spectrum_pattern_gen_tb] PASS: Total writes = %0d (expected %0d)", write_count, 5 * 64);
             $display("ALL CHECKS PASSED");
         end else begin
             $display("[FAIL] Unexpected write count: %0d", write_count);

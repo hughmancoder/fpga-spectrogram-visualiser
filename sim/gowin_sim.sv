@@ -6,9 +6,7 @@
  * Used by simulation tools (iverilog, Verilator, etc.) without polluting synthesizable RTL.
  */
 
-// =============================================================================
 // rPLL Behavioral Simulation Model
-// =============================================================================
 module rPLL #(
     parameter FCLKIN           = "27",
     parameter DEVICE           = "GW2AR-18C",
@@ -79,9 +77,7 @@ module rPLL #(
 
 endmodule
 
-// =============================================================================
 // CLKDIV Behavioral Simulation Model
-// =============================================================================
 module CLKDIV #(
     parameter DIV_MODE = "5",
     parameter GSREN    = "false"
@@ -115,9 +111,7 @@ module CLKDIV #(
 
 endmodule
 
-// =============================================================================
 // OSER10 Behavioral 10:1 Serializer Simulation Model
-// =============================================================================
 module OSER10 (
     input  wire D0,
     input  wire D1,
@@ -177,9 +171,7 @@ module OSER10 (
 
 endmodule
 
-// =============================================================================
 // TLVDS_OBUF True LVDS Differential Output Buffer Simulation Model
-// =============================================================================
 module TLVDS_OBUF (
     input  wire I,
     output wire O,

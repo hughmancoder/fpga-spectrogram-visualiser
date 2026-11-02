@@ -33,14 +33,9 @@ module top_tb;
     int test_errors = 0;
 
     initial begin
-        $dumpfile("build/top_tb.vcd");
-        $dumpvars(0, top_tb);
 
-        $display("==================================================================");
-        $display(" [TESTBENCH] Starting Top-Level HDMI Video Pipeline Verification");
-        $display("==================================================================");
 
-        // TEST 1: PLL Lock & LED Status
+        // TEST 1: PLL Lock and LED Status
         $display("\n[TEST 1] Checking PLL lock and status LEDs...");
         wait(uut.pll_locked == 1'b1);
         $display("  -> PLL locked at %0t ps", $time);
@@ -149,11 +144,10 @@ module top_tb;
         // TEST 4: TMDS Encoding & Control Tokens
         $display("\n[TEST 4] Verifying TMDS Encoder outputs...");
 
-        // During blanking (de == 0), Blue channel transmits control tokens:
+        // During blanking (vid_de == 0), Blue channel transmits control tokens:
         // When hsync=0, vsync=0 -> ctrl=2'b00 -> TMDS out should be 10'b1101010100
-        @(negedge uut.de);
-        wait(uut.hsync == 1'b0 && uut.vsync == 1'b0);
-        @(posedge uut.clk_pixel);
+        wait(uut.vid_de == 1'b0 && uut.vid_hsync == 1'b0 && uut.vid_vsync == 1'b0);
+        repeat (2) @(posedge uut.clk_pixel);
         #1;
         $display("  -> Blanking TMDS Token (hsync=0, vsync=0): 10'b%b (Expected: 10'b1101010100)", uut.u_hdmi.encoded_b);
         if (uut.u_hdmi.encoded_b === 10'b1101010100) begin
@@ -163,16 +157,33 @@ module top_tb;
             test_errors++;
         end
 
-        // During active video (de == 1), check that color values are generated
-        @(posedge uut.de);
-        @(posedge uut.clk_pixel);
+        // Test active video color output:
+        // First test: Diagnostic mode (btn[1] == 0)
+        btn = 2'b00;
+        wait(uut.vid_de == 1'b1);
+        repeat (10) @(posedge uut.clk_pixel);
         #1;
-        $display("  -> Active Video Test Sample at (x=%0d, y=%0d): RGB=(%0h, %0h, %0h)", 
+        $display("  -> Diagnostic Pattern Sample at (x=%0d, y=%0d): RGB=(%0h, %0h, %0h)", 
                  uut.pixel_x, uut.pixel_y, uut.red, uut.green, uut.blue);
         if (uut.red !== 8'h00 || uut.green !== 8'h00 || uut.blue !== 8'h00) begin
-            $display("  -> PASS: Test pattern generator is actively producing pixel colors!");
+            $display("  -> PASS: Diagnostic test pattern actively produces pixel colors!");
         end else begin
-            $display("  -> FAIL: Test pattern output is unexpectedly blank!");
+            $display("  -> FAIL: Diagnostic test pattern output is unexpectedly blank!");
+            test_errors++;
+        end
+
+        // Second test: Real-time animated equalizer visualizer mode (btn[1] == 1, default on hardware)
+        btn = 2'b11; // Buttons released (idle state with pull-up)
+        // Wait for an active line within the bar display region (e.g. pixel_y = 445, baseline is 450)
+        wait(uut.pixel_y == 12'd445 && uut.vid_de == 1'b1);
+        repeat (5) @(posedge uut.clk_pixel); // Position inside Bar 0
+        #1;
+        $display("  -> Equalizer Visualizer Sample at (x=%0d, y=%0d): RGB=(%0h, %0h, %0h)", 
+                 uut.pixel_x, uut.pixel_y, uut.red, uut.green, uut.blue);
+        if (uut.red !== 8'h00 || uut.green !== 8'h00 || uut.blue !== 8'h00) begin
+            $display("  -> PASS: Real-time audio equalizer bars are actively rendered!");
+        end else begin
+            $display("  -> FAIL: Equalizer visualizer output is unexpectedly blank!");
             test_errors++;
         end
 

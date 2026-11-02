@@ -1,27 +1,14 @@
 `default_nettype none
 
 /*
- Pixel Clock PLL Module for Tang Nano 20K (Gowin GW2AR-18)
- 
- Input:  27.0 MHz onboard crystal oscillator (pin 4)
- Output: 
-   - 371.25 MHz serial clock (720p 1280x720 @ 60Hz TMDS clock). Needed for HDMI
-   - 74.25 MHz pixel clock
-   - CLKOUT = CLK_IN * (FBDIV_SEL + 1) / (IDIV_SEL + 1)
-   - 4 = IDIV_SEL + 1
-   - 55 = FBDIV_SEL + 1
-   - 2 = ODIV_SEL + 1
-   - Serial clock: 27 * (55 / 4) * 2 = 371.25
-    - Pixel clock = serial clock / CLKDIV = 371.25 / 5 = 74.25 MHz
+ * HDMI Clock Generator for Tang Nano 20K (Gowin GW2AR-18)
+ * 
+ * Multiplies onboard 27.0 MHz oscillator (pin 4) via Gowin rPLL and CLKDIV:
+ * - 371.25 MHz serial clock (5x TMDS bit clock for 720p60 HDMI)
+ * - 74.25 MHz pixel clock (video timing, pixel generation)
+ */
 
-rPLL Parameters for 371.25 MHz:
-   - FCLKIN    = "27.0"
-   - IDIV_SEL  = 3   (divide by 4 -> PFD = 6.75 MHz)
-   - FBDIV_SEL = 54  (multiply by 55 -> CLKOUT = 371.25 MHz)
-   - ODIV_SEL  = 2   (VCO = 371.25 * 2 = 742.5 MHz)
-*/
-
-module pll_pixel (
+module hdmi_clock_gen (
     input  wire clk_in,   
     input  wire rst,     
     output wire pixel_clk,
