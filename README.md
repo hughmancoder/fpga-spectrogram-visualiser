@@ -74,21 +74,10 @@ An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for 
 - pixel_x [11:0]: 12-bit horizontal coordinate (2^11 = 2048 covers the 1280 active width and 1650 total line width; 12 bits [11:0] gives range 0..4095)
 - pixel_y [11:0]: 12-bit vertical coordinate (matched to pixel_x width for consistency)
 
-### Microphone (i2c)
-
-SD: Serial Data
-
-MS: Word Select (WS / LRCK) - determines left or right channel
-
-CCK: Serial Clock (SCK / BCLK) - synchronises the bits
-
-L/R: Channel Select (Tie to GND for left, VDD for right)
-
 ## Source Files
 
 **Clocking and Reset**
 - reset_sync.sv
-- cdc_sync.sv
 
 **Video Processing**
 - hdmi_clock_gen.sv: Generates pixel_clk (74.25 MHz) and serial_clk (371.25 MHz). Documented in [Gowin Clock User Guide](<docs/gowin/Gowin Clock User Guide.pdf>).
@@ -97,13 +86,16 @@ L/R: Channel Select (Tie to GND for left, VDD for right)
   - de (Data Enable): High (1) inside the visible 1280 × 720 active area.
   - hsync & vsync: Pulse high (1) during horizontal/vertical sync windows so the monitor can align each row and frame (used by hdmi_tx.sv).
 - tmds_encoder.sv: 8b/10b TMDS encoder implemented from [User Guide (Chapter 3)](<docs/gowin/User Guide.pdf>).
-- hdmi_tx.sv: Wraps the three TMDS encoders, OSER10 10:1 DDR serializers, and TLVDS_OBUF differential output buffers.
+- hdmi_tx.sv: Wraps the three TMDS encoders, OSER10 10:1 DDR serializers, and differential output buffers.
 
 **Graphics**
-- bar_renderer.sv: Real-time 2-stage pipelined graphic equalizer bar renderer.
+- bar_renderer.sv: Pixel multiplexing to draw bar graphics
 
 **Supplementary**
 - spectrum_pattern_gen.sv: Synthetic animated bar heights for testing without audio input.
+
+**Microphone driver**
+- i2s_rx.sv: driver for i2s microphone. Contains a synchroniser, a clock divider and a shift register
 
 **Top Level**
 - top.sv: Top-level FPGA module connecting clocking, timing, rendering, and HDMI output.

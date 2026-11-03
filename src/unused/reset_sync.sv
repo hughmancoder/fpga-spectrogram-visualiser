@@ -4,6 +4,7 @@ The moment arst_n goes low, every single flip-flop clears instantly
 This guarantees every register comes out of reset on the exact same clock edge
 */
 
+/*
 module reset_sync #(
     parameter int STAGES = 2 // Number of synchronisation stages (>= 2)
 ) (
@@ -28,3 +29,4 @@ module reset_sync #(
 
    
 endmodule
+*/

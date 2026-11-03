@@ -5,6 +5,7 @@
     Using multiple registers to delay the signal prevents metastability. 
  */
 
+/*
 module cdc_sync #(
     parameter int WIDTH  = 1,
     parameter int STAGES = 2      // >= 2
@@ -38,3 +39,4 @@ end
 
 
 endmodule
+*/

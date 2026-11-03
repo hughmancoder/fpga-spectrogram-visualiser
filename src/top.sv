@@ -11,6 +11,11 @@ module top (
     output wire [2:0] tmds_data_p,
     output wire [2:0] tmds_data_n,
     output wire [5:0] led       // Onboard LEDs (active-low: 0 = lit)
+
+    // I2S Microphone Pins 
+    output wire       i2s_sck, // 73
+    output wire       i2s_ws, // 74
+    input  wire       i2s_sd // 75
 );
 
     // Clock Generation 
