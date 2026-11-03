@@ -96,6 +96,8 @@ An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for 
 
 **Microphone driver**
 - i2s_rx.sv: driver for i2s microphone. Contains a synchroniser, a clock divider and a shift register
+Signal Processing
+- fft.sv
 
 **Top Level**
 - top.sv: Top-level FPGA module connecting clocking, timing, rendering, and HDMI output.

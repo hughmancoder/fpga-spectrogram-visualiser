@@ -26,9 +26,12 @@ build/
 
 Notes.md
 TODO.md
-# Hidden reference RTL (spoilers)
+
+# reference RTL 
 .reference/
 src/solutions/
 solutions/
 docs/phase2_spec.md
 docs/architecture/
+docs/fft_guide.md
+docs/fft_core_guide.md
