@@ -28,9 +28,9 @@ Notes.md
 TODO.md
 
 # reference RTL 
-.reference/
-src/solutions/
-solutions/
+
+src/reference/
+reference/
 docs/phase2_spec.md
 docs/architecture/
 docs/fft_guide.md

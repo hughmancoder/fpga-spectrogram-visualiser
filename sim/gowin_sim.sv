@@ -29,22 +29,22 @@ module rPLL #(
     parameter DYN_SDIV_SEL     = 2,
     parameter CLKOUTD_SRC      = "CLKOUT",
     parameter CLKOUTD3_SRC     = "CLKOUT"
-)(
-    input  wire       CLKIN,
-    input  wire       CLKFB,
-    input  wire       RESET,
-    input  wire       RESET_P,
-    input  wire [5:0] FBDSEL,
-    input  wire [5:0] IDSEL,
-    input  wire [5:0] ODSEL,
-    input  wire [3:0] PSDA,
-    input  wire [3:0] DUTYDA,
-    input  wire [3:0] FDLY,
-    output wire       CLKOUT,
-    output wire       CLKOUTP,
-    output wire       CLKOUTD,
-    output wire       CLKOUTD3,
-    output reg        LOCK
+) (
+    input wire CLKIN,
+    input wire CLKFB,
+    input wire RESET,
+    input wire RESET_P,
+    input wire [5:0] FBDSEL,
+    input wire [5:0] IDSEL,
+    input wire [5:0] ODSEL,
+    input wire [3:0] PSDA,
+    input wire [3:0] DUTYDA,
+    input wire [3:0] FDLY,
+    output wire CLKOUT,
+    output wire CLKOUTP,
+    output wire CLKOUTD,
+    output wire CLKOUTD3,
+    output reg LOCK
 );
 
     // 371.25 MHz clock generation:
@@ -55,7 +55,8 @@ module rPLL #(
 
     // Lock generation after reset deassertion
     initial begin
-        LOCK = 1'b0;
+        // Fall after time 0 so logic waiting on negedge rst_n sees a real reset edge
+        #0.001 LOCK = 1'b0;
         #100;
         if (!RESET) LOCK = 1'b1;
     end
@@ -81,11 +82,11 @@ endmodule
 module CLKDIV #(
     parameter DIV_MODE = "5",
     parameter GSREN    = "false"
-)(
-    input  wire HCLKIN,
-    input  wire RESETN,
-    input  wire CALIB,
-    output reg  CLKOUT
+) (
+    input wire HCLKIN,
+    input wire RESETN,
+    input wire CALIB,
+    output reg CLKOUT
 );
 
     int div_cnt = 0;
@@ -113,20 +114,20 @@ endmodule
 
 // OSER10 Behavioral 10:1 Serializer Simulation Model
 module OSER10 (
-    input  wire D0,
-    input  wire D1,
-    input  wire D2,
-    input  wire D3,
-    input  wire D4,
-    input  wire D5,
-    input  wire D6,
-    input  wire D7,
-    input  wire D8,
-    input  wire D9,
-    input  wire FCLK,
-    input  wire PCLK,
-    input  wire RESET,
-    output reg  Q
+    input wire D0,
+    input wire D1,
+    input wire D2,
+    input wire D3,
+    input wire D4,
+    input wire D5,
+    input wire D6,
+    input wire D7,
+    input wire D8,
+    input wire D9,
+    input wire FCLK,
+    input wire PCLK,
+    input wire RESET,
+    output reg Q
 );
 
     reg [9:0] load_buf = 10'd0;
@@ -173,7 +174,7 @@ endmodule
 
 // TLVDS_OBUF True LVDS Differential Output Buffer Simulation Model
 module TLVDS_OBUF (
-    input  wire I,
+    input wire I,
     output wire O,
     output wire OB
 );

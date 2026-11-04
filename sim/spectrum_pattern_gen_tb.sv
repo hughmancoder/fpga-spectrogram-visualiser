@@ -7,25 +7,25 @@ module spectrum_pattern_gen_tb;
     reg rst_n = 0;
     reg tick = 0;
 
-    reg  [5:0] bar_idx = 0;
+    reg [5:0] bar_idx = 0;
     wire [7:0] bar_level;
     wire [5:0] write_addr;
     wire [7:0] write_data;
-    wire       write_en;
+    wire write_en;
 
     spectrum_pattern_gen #(
         .NUM_BARS(64),
         .BAR_HEIGHT_MAX(255),
         .DATA_WIDTH(8)
     ) uut (
-        .clk        (clk),
-        .rst_n      (rst_n),
-        .tick       (tick),
-        .bar_idx    (bar_idx),
-        .bar_level  (bar_level),
-        .write_addr (write_addr),
-        .write_data (write_data),
-        .write_en   (write_en)
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .tick      (tick),
+        .bar_idx   (bar_idx),
+        .bar_level (bar_level),
+        .write_addr(write_addr),
+        .write_data(write_data),
+        .write_en  (write_en)
     );
 
     always #5 clk = ~clk;
@@ -70,7 +70,8 @@ module spectrum_pattern_gen_tb;
         end
 
         if (write_count == 5 * 64) begin
-            $display("[spectrum_pattern_gen_tb] PASS: Total writes = %0d (expected %0d)", write_count, 5 * 64);
+            $display("[spectrum_pattern_gen_tb] PASS: Total writes = %0d (expected %0d)",
+                     write_count, 5 * 64);
             $display("ALL CHECKS PASSED");
         end else begin
             $display("[FAIL] Unexpected write count: %0d", write_count);

@@ -29,7 +29,7 @@ TB_SRCS    := $(SIM_MODELS) $(PKG_SRCS) $(RTL_SRCS) $(TB_FILE)
 TB_PARAMS  ?=
 
 # Regression test list for `make test`
-TESTS      ?= video_sync_tb hdmi_clock_gen_tb spectrum_pattern_gen_tb bar_renderer_tb top_tb
+TESTS      ?= video_sync_tb hdmi_clock_gen_tb spectrum_pattern_gen_tb bar_renderer_tb i2s_rx_tb fft_tb top_tb
 
 BUILD_DIR  ?= build
 
@@ -95,6 +95,7 @@ help:
 	@echo "  make sim TB=name - Run specific testbench (e.g. TB=top_tb or TB=sim/my_tb.v)"
 	@echo "  make waves       - Open simulation waveforms in GTKWave / Surfer (supports TB=name)"
 	@echo "  make test        - Run regression testbenches ($(TESTS))"
+	@echo "  make format      - Auto-format all SystemVerilog files in src/ and sim/"
 	@echo "  make clean       - Clean all build & simulation artifacts"
 	@echo "  make clean-sim   - Clean only simulation artifacts (.vvp, .vcd, logs)"
 	@echo "  make check-tools - Verify toolchain installation status"
@@ -208,6 +209,12 @@ check-tools:
 setup-toolchain:
 	@chmod +x scripts/setup_toolchain.sh
 	@./scripts/setup_toolchain.sh
+
+.PHONY: format
+format:
+	@echo "==> Formatting SystemVerilog files with verible-verilog-format..."
+	verible-verilog-format --indentation_spaces=4 --named_port_alignment=align --port_declarations_alignment=flush-left --module_net_variable_alignment=flush-left --inplace src/*.sv sim/*.sv
+	verible-verilog-syntax src/*.sv sim/*.sv
 
 # ------------------------------------------------------------------------------
 # 7. Clean Targets

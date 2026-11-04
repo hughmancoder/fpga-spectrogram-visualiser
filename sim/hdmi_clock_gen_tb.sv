@@ -9,11 +9,11 @@ module hdmi_clock_gen_tb;
     wire locked;
 
     hdmi_clock_gen uut (
-        .clk_in     (clk_in),
-        .rst        (rst),
-        .pixel_clk  (pixel_clk),
-        .serial_clk (serial_clk),
-        .locked     (locked)
+        .clk_in    (clk_in),
+        .rst       (rst),
+        .pixel_clk (pixel_clk),
+        .serial_clk(serial_clk),
+        .locked    (locked)
     );
 
     // 27 MHz reference clock generator (half-period ~18.5185 ns)
@@ -26,7 +26,7 @@ module hdmi_clock_gen_tb;
         $dumpfile("build/hdmi_clock_gen_tb.vcd");
         $dumpvars(0, hdmi_clock_gen_tb);
 
-    
+
         @(posedge pixel_clk);
         t1 = $realtime;
         @(posedge pixel_clk);

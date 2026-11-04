@@ -6,34 +6,34 @@ module audio_window_tb;
     localparam int FRAME_SIZE = 64;
     localparam int GAIN_SHIFT = 4;
 
-    reg                clk          = 1'b0;
-    reg                rst_n        = 1'b0;
-    reg  signed [23:0] sample_in    = 24'sd0;
-    reg                sample_valid = 1'b0;
+    reg clk = 1'b0;
+    reg rst_n = 1'b0;
+    reg signed [23:0] sample_in = 24'sd0;
+    reg sample_valid = 1'b0;
 
     wire signed [15:0] win_sample;
-    wire [5:0]         win_idx;
-    wire               win_valid;
-    wire               frame_done;
+    wire [5:0] win_idx;
+    wire win_valid;
+    wire frame_done;
 
-    always #5 clk = ~clk; // 100 MHz test clock
+    always #5 clk = ~clk;  // 100 MHz test clock
 
     audio_window #(
-        .FRAME_SIZE (FRAME_SIZE),
-        .GAIN_SHIFT (GAIN_SHIFT)
+        .FRAME_SIZE(FRAME_SIZE),
+        .GAIN_SHIFT(GAIN_SHIFT)
     ) uut (
-        .clk          (clk),
-        .rst_n        (rst_n),
-        .sample_in    (sample_in),
-        .sample_valid (sample_valid),
-        .win_sample   (win_sample),
-        .win_idx      (win_idx),
-        .win_valid    (win_valid),
-        .frame_done   (frame_done)
+        .clk         (clk),
+        .rst_n       (rst_n),
+        .sample_in   (sample_in),
+        .sample_valid(sample_valid),
+        .win_sample  (win_sample),
+        .win_idx     (win_idx),
+        .win_valid   (win_valid),
+        .frame_done  (frame_done)
     );
 
     int errors = 0;
-    reg signed [15:0] captured [0:FRAME_SIZE-1];
+    reg signed [15:0] captured[0:FRAME_SIZE-1];
 
     initial begin
         $dumpfile("build/audio_window_tb.vcd");
@@ -88,19 +88,22 @@ module audio_window_tb;
             $display("[FAIL] Window center captured[32] = %0d (expected ~16383)", captured[32]);
             errors++;
         end else begin
-            $display("[PASS] Window center peak: captured[32] = %0d (expected ~16383)", captured[32]);
+            $display("[PASS] Window center peak: captured[32] = %0d (expected ~16383)",
+                     captured[32]);
         end
 
         // Check monotonic increase on rising half (0..32) and decrease on falling half (32..63)
         for (int n = 1; n <= 32; n++) begin
             if (captured[n] < captured[n-1]) begin
-                $display("[FAIL] Non-monotonic rising slope at n=%0d (%0d < %0d)", n, captured[n], captured[n-1]);
+                $display("[FAIL] Non-monotonic rising slope at n=%0d (%0d < %0d)", n, captured[n],
+                         captured[n-1]);
                 errors++;
             end
         end
         for (int n = 33; n < FRAME_SIZE; n++) begin
             if (captured[n] > captured[n-1]) begin
-                $display("[FAIL] Non-monotonic falling slope at n=%0d (%0d > %0d)", n, captured[n], captured[n-1]);
+                $display("[FAIL] Non-monotonic falling slope at n=%0d (%0d > %0d)", n, captured[n],
+                         captured[n-1]);
                 errors++;
             end
         end
@@ -129,7 +132,8 @@ module audio_window_tb;
             $display("[FAIL] Negative saturation failed: got %0d (expected ~ -32767)", win_sample);
             errors++;
         end else begin
-            $display("[PASS] Negative overflow saturates cleanly without wrapping: %0d", win_sample);
+            $display("[PASS] Negative overflow saturates cleanly without wrapping: %0d",
+                     win_sample);
         end
 
         $display("-------------------------------------------------------------");

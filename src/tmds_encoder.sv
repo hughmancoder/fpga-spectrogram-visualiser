@@ -23,12 +23,12 @@ tokens that encode the HSYNC and VSYNC signals.
 */
 
 module tmds_encoder (
-    input  wire       clk,
-    input  wire       rst_n,
-    input  wire [7:0] data_in,
-    input  wire [1:0] ctrl_in,
-    input  wire       de,
-    output reg  [9:0] tmds_out
+    input wire clk,
+    input wire rst_n,
+    input wire [7:0] data_in,
+    input wire [1:0] ctrl_in,
+    input wire de,
+    output reg [9:0] tmds_out
 );
 
     // Count 1s in input data
@@ -54,8 +54,7 @@ module tmds_encoder (
     // Count 1s and 0s in q_m[7:0]
     wire [3:0] n1_q_m;
     wire [3:0] n0_q_m;
-    assign n1_q_m = q_m[0] + q_m[1] + q_m[2] + q_m[3] +
-                    q_m[4] + q_m[5] + q_m[6] + q_m[7];
+    assign n1_q_m = q_m[0] + q_m[1] + q_m[2] + q_m[3] + q_m[4] + q_m[5] + q_m[6] + q_m[7];
     assign n0_q_m = 4'd8 - n1_q_m;
 
     // Disparity counter
@@ -72,7 +71,7 @@ module tmds_encoder (
                     tmds_out[9]   <= ~q_m[8];
                     tmds_out[8]   <= q_m[8];
                     tmds_out[7:0] <= q_m[8] ? q_m[7:0] : ~q_m[7:0];
-                    
+
                     if (q_m[8]) begin
                         cnt <= cnt + (n1_q_m - n0_q_m);
                     end else begin
@@ -80,13 +79,13 @@ module tmds_encoder (
                     end
                 end else begin
                     if ((cnt > 0 && n1_q_m > n0_q_m) || (cnt < 0 && n0_q_m > n1_q_m)) begin
-                        tmds_out[9]   <= 1'b1;
-                        tmds_out[8]   <= q_m[8];
+                        tmds_out[9] <= 1'b1;
+                        tmds_out[8] <= q_m[8];
                         tmds_out[7:0] <= ~q_m[7:0];
                         cnt <= cnt + 2 * q_m[8] + (n0_q_m - n1_q_m);
                     end else begin
-                        tmds_out[9]   <= 1'b0;
-                        tmds_out[8]   <= q_m[8];
+                        tmds_out[9] <= 1'b0;
+                        tmds_out[8] <= q_m[8];
                         tmds_out[7:0] <= q_m[7:0];
                         cnt <= cnt - 2 * (~q_m[8]) + (n1_q_m - n0_q_m);
                     end

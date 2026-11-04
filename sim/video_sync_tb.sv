@@ -1,10 +1,10 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
 module video_sync_tb;
 
     reg clk;
     reg rst_n;
-    
+
     wire hsync;
     wire vsync;
     wire de;
@@ -12,13 +12,13 @@ module video_sync_tb;
     wire [11:0] pixel_y;
 
     video_sync uut (
-        .clk(clk),
-        .rst_n(rst_n),
-        .hsync(hsync),
-        .vsync(vsync),
+        .clk        (clk),
+        .rst_n      (rst_n),
+        .hsync      (hsync),
+        .vsync      (vsync),
         .data_enable(de),
-        .pixel_x(pixel_x),
-        .pixel_y(pixel_y)
+        .pixel_x    (pixel_x),
+        .pixel_y    (pixel_y)
     );
 
     // 74.25 MHz clock -> 13.468 ns period
@@ -33,7 +33,7 @@ module video_sync_tb;
     initial begin
         $dumpfile("build/video_sync_tb.vcd");
         $dumpvars(0, video_sync_tb);
-        
+
         rst_n = 0;
         #100;
         rst_n = 1;
@@ -41,13 +41,13 @@ module video_sync_tb;
         // Wait for a few VSYNCs
         @(posedge vsync);
         @(posedge vsync);
-        
+
         // Measure H_TOTAL
         @(posedge hsync);
         hsync_count = 0;
         fork
             begin
-                while(1) begin
+                while (1) begin
                     @(posedge clk);
                     hsync_count++;
                 end
@@ -57,7 +57,7 @@ module video_sync_tb;
             end
         join_any
         disable fork;
-        
+
         $display("[video_sync_tb] Measured H_TOTAL: %d (Expected: 1650)", hsync_count);
         if (hsync_count != 1650) $error("H_TOTAL mismatch!");
 
@@ -66,7 +66,7 @@ module video_sync_tb;
         vsync_count = 0;
         fork
             begin
-                while(1) begin
+                while (1) begin
                     @(posedge hsync);
                     vsync_count++;
                 end
@@ -76,22 +76,22 @@ module video_sync_tb;
             end
         join_any
         disable fork;
-        
+
         $display("[video_sync_tb] Measured V_TOTAL: %d (Expected: 750)", vsync_count);
         if (vsync_count != 750) $error("V_TOTAL mismatch!");
-        
+
         // Measure DE active pixels per line and lines per frame
         @(posedge vsync);
         de_lines_count = 0;
-        
+
         // Count for one frame
-        while(vsync == 1) @(posedge clk);
-        while(vsync == 0) begin
+        while (vsync == 1) @(posedge clk);
+        while (vsync == 0) begin
             if (de == 1'b0) begin
                 @(posedge clk);
                 if (de == 1'b1) begin
                     de_high_count = 0;
-                    while(de == 1'b1) begin
+                    while (de == 1'b1) begin
                         @(posedge clk);
                         de_high_count++;
                     end

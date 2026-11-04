@@ -1,24 +1,31 @@
+/*
+Display multiplixing for spectrogram bars
+
+Note: the number of bars and bar width parameters needs to be aligned with the display resolution
+NUM_BARS * BAR_WIDTH = 1280  -->  32 bars * 40 px = 1280 px
+bar_addr width = $clog2(NUM_BARS) = $clog2(32) = 5 bits 
+*/
 module bar_renderer #(
     parameter int NUM_BARS   = 64,
     parameter int BAR_WIDTH  = 20,
     parameter int GAP_WIDTH  = 4,
     parameter int Y_BOTTOM   = 450,  // Baseline Y coordinate
     parameter int MAX_HEIGHT = 256   // Max bar height in pixels
-)(
-    input  logic        clk,          // Pixel clock
-    input  logic        rst_n,        // Active low
-    
+) (
+    input logic clk,  // Pixel clock
+    input logic rst_n,  // Active low
+
     // Video timing inputs
-    input  logic [11:0] pixel_x,
-    input  logic [11:0] pixel_y,
-    input  logic        active_video, // Active inside 1280x720 box
+    input logic [11:0] pixel_x,
+    input logic [11:0] pixel_y,
+    input logic active_video,  // Active inside 1280x720 box
 
     // Interface to bar_levels memory
-    input  logic [7:0]                  bar_level, // Current height of bar_addr
+    input logic [7:0] bar_level,  // Current height of bar_addr
     output logic [$clog2(NUM_BARS)-1:0] bar_addr,  // Current bar index (0..63)
 
     // RGB Output
-    output logic [23:0] rgb_out       // 8-bit RGB streams
+    output logic [23:0] rgb_out  // 8-bit RGB streams
 );
 
     localparam logic [23:0] RED         = 24'hFF0000;
@@ -26,15 +33,15 @@ module bar_renderer #(
     localparam logic [23:0] DARK_GREEN  = 24'h005500;
     localparam logic [23:0] BLACK       = 24'h000000;
 
-    localparam int THRESH_MID = MAX_HEIGHT / 3;       
-    localparam int THRESH_RED = (MAX_HEIGHT * 2) / 3; 
-    localparam int SOLID_WIDTH = BAR_WIDTH - GAP_WIDTH; 
+    localparam int          THRESH_MID  = MAX_HEIGHT / 3;
+    localparam int          THRESH_RED  = (MAX_HEIGHT * 2) / 3;
+    localparam int          SOLID_WIDTH = BAR_WIDTH - GAP_WIDTH;
 
     // Horizontal Tracking (Running counter method for 20px pitch)
     // 64 x 20 = 1280
-    logic [$clog2(NUM_BARS):0]    current_bar_idx;
+    logic [$clog2(NUM_BARS):0] current_bar_idx;
     logic [$clog2(BAR_WIDTH)-1:0] sub_bar_x;
-    logic                         in_gap;
+    logic in_gap;
 
     assign bar_addr = current_bar_idx;
     assign in_gap   = (sub_bar_x >= SOLID_WIDTH);
@@ -54,9 +61,9 @@ module bar_renderer #(
     end
 
     // Introduce 1 cycle delay to match BRAM read latency to sync with bar_addr
-    logic        in_gap_d1;
+    logic in_gap_d1;
     logic [11:0] pixel_y_d1;
-    logic        active_video_d1;
+    logic active_video_d1;
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -71,7 +78,7 @@ module bar_renderer #(
     end
 
     // Vertical calculation and colour picker
-    logic        above_floor;
+    logic above_floor;
     logic [11:0] dist_from_bottom;
 
     assign above_floor      = (pixel_y_d1 <= Y_BOTTOM);
