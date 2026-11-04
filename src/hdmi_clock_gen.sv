@@ -6,6 +6,7 @@
  * Multiplies onboard 27.0 MHz oscillator (pin 4) via Gowin rPLL and CLKDIV:
  * - 371.25 MHz serial clock (5x TMDS bit clock for 720p60 HDMI)
  * - 74.25 MHz pixel clock (video timing, pixel generation)
+ * Refer to the Gowin Clock User Guide PDF in documentation for port list
  */
 
 module hdmi_clock_gen (

@@ -61,7 +61,7 @@ module top_tb;
 
         if (mic_prev_ws === 1'b1 && i2s_ws === 1'b0) begin
             mic_angle = 2.0 * 3.141592653589793 * tone_bin * mic_sample_index / 64.0;
-            mic_word = $rtoi($cos(mic_angle) * TONE_AMPLITUDE);
+            mic_word  = $rtoi($cos(mic_angle) * TONE_AMPLITUDE);
             mic_sample_index <= mic_sample_index + 1;
             mic_bit_idx <= 23;
             mic_drive <= 1'b0;
@@ -112,7 +112,7 @@ module top_tb;
             if (int'(uut.bars[i]) > peak_level) begin
                 next_level = peak_level;
                 peak_level = int'(uut.bars[i]);
-                peak_bin = i;
+                peak_bin   = i;
             end else if (int'(uut.bars[i]) > next_level) begin
                 next_level = int'(uut.bars[i]);
             end
@@ -154,6 +154,16 @@ module top_tb;
         $display("  -> PLL locked at %0t ps", $time);
         #1;
         check(led[0] === 1'b0, "LED0 is lit (0) once the PLL has locked");
+        check(uut.rst_n_audio === 1'b0 && uut.rst_n_pixel === 1'b0,
+              "Domain resets stay low at the moment of lock");
+
+        @(posedge clk);
+        #1;
+        check(uut.rst_n_audio === 1'b0, "Audio reset still low after one clk edge");
+        @(posedge clk);
+        #1;
+        check(uut.rst_n_audio === 1'b1, "Audio reset released after two clk edges");
+        check(uut.rst_n_pixel === 1'b1, "Pixel reset released");
 
         // TEST 2: Clock Frequencies (Pixel: 74.25 MHz, Serial: 371.25 MHz)
         $display("\n[TEST 2] Measuring Clock Frequencies...");
@@ -174,7 +184,8 @@ module top_tb;
         freq_serial_mhz = 1000.0 / t_period;
         $display("  -> Serial Clock Period: %0.3f ns (Freq: %0.2f MHz, Target: 371.25 MHz)",
                  t_period, freq_serial_mhz);
-        check(freq_serial_mhz >= 365.0 && freq_serial_mhz <= 375.0, "Serial clock within tolerance");
+        check(freq_serial_mhz >= 365.0 && freq_serial_mhz <= 375.0,
+              "Serial clock within tolerance");
 
         // TEST 3: Video Timings (720p60: 1280x720, H_TOTAL=1650, HSYNC=40)
         $display("\n[TEST 3] Verifying 720p Video Timings & Blanking intervals...");
@@ -236,7 +247,7 @@ module top_tb;
         @(posedge i2s_sck);
         t_start = $realtime;
         @(negedge i2s_sck);
-        t_high = $realtime - t_start;
+        t_high  = $realtime - t_start;
         t_start = $realtime;
         @(posedge i2s_sck);
         t_low = $realtime - t_start;

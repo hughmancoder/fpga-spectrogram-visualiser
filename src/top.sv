@@ -13,9 +13,9 @@ module top (
     output wire [5:0] led,  // Onboard LEDs (active-low: 0 = lit)
 
     // I2S microphone pins 
-    output wire i2s_sck,  // Pin 73
-    output wire i2s_ws,  // Pin 74
-    input wire i2s_sd  // Pin 75
+    output wire i2s_sck,  // Pin 27
+    output wire i2s_ws,  // Pin 28
+    input wire i2s_sd  // Pin 29
 );
 
     localparam int NUM_BARS = 32;
@@ -23,7 +23,8 @@ module top (
     // Clock generation 
     //  74.25 MHz pixel clock, 371.25 MHz 5x TMDS serial clock
     logic clk_pixel, clk_serial;
-    logic sys_rst_n;  // active low system reset 
+    logic sys_rst_n;  // active low system reset, high once the PLL has locked
+    logic rst_n_audio, rst_n_pixel;  // sys_rst_n synchronised to each clock domain
 
     assign led[0] = !sys_rst_n;
 
@@ -35,25 +36,27 @@ module top (
         .locked    (sys_rst_n)    // outputs 1 when clocks are stable
     );
 
+    // PLL lock is asynchronous to every clock, so each domain releases reset on its own clock edge
+    reset_sync u_reset_sync_audio (
+        .clk   (clk),
+        .arst_n(sys_rst_n),
+        .rst_n (rst_n_audio)
+    );
+
+    reset_sync u_reset_sync_pixel (
+        .clk   (clk_pixel),
+        .arst_n(sys_rst_n),
+        .rst_n (rst_n_pixel)
+    );
+
     // Video sync and timing generation 
     logic hsync, vsync, data_enable;
     logic [11:0] pixel_x, pixel_y;
 
 
-    // populate spectrogram bars
-    initial begin
-        for (int i = 0; i < FFT_SIZE; i = i + 1) begin
-            X_re[i] = 16'sd0;
-            X_im[i] = 16'sd0;
-        end
-        for (i = 0; i < NUM_BARS; i = i + 1) begin
-            bars[i] = 8'd0;
-        end
-    end
-
     video_sync u_video_sync (
         .clk        (clk_pixel),
-        .rst_n      (sys_rst_n),
+        .rst_n      (rst_n_pixel),
         .hsync      (hsync),
         .vsync      (vsync),
         .data_enable(data_enable),
@@ -61,9 +64,16 @@ module top (
         .pixel_y    (pixel_y)
     );
 
-    i2s_rx u_i2s_rx (
-        .clk         (clk_pixel),
-        .rst_n       (sys_rst_n),
+    // Audio path runs from the 27 MHz crystal clock
+    logic signed [23:0] sample_data;
+    logic sample_valid;
+
+    // 27 MHz / 10 = 2.7 MHz SCK -> 42.19 kHz sample rate (INMP441 SCK limit is 3.2 MHz)
+    i2s_rx #(
+        .CLK_DIV(10)
+    ) u_i2s_rx (
+        .clk         (clk),
+        .rst_n       (rst_n_audio),
         .i2s_sck     (i2s_sck),
         .i2s_ws      (i2s_ws),
         .i2s_sd      (i2s_sd),
@@ -72,13 +82,13 @@ module top (
     );
 
 
-    output logic [$clog2(NUM_BARS)-1:0] bin_idx;
-    output logic [7:0] mag_out;
-    output logic mag_valid;
+    logic [$clog2(NUM_BARS)-1:0] bin_idx;
+    logic [7:0] mag_out;
+    logic mag_valid;
 
     fft u_fft (
-        .clk         (clk_pixel),
-        .rst_n       (sys_rst_n),
+        .clk         (clk),
+        .rst_n       (rst_n_audio),
         .sample_in   (sample_data),
         .sample_valid(sample_valid),
         .bin_idx     (bin_idx),
@@ -89,7 +99,7 @@ module top (
     // Display bar ram
     logic [7:0] bars[0:NUM_BARS-1];
     logic [4:0] bar_addr;
-    wire [7:0] bar_level = bars[bin_idx];
+    logic [7:0] bar_level;
 
     initial begin
         for (int i = 0; i < NUM_BARS; i = i + 1) begin
@@ -97,17 +107,15 @@ module top (
         end
     end
 
+    // Written from the audio clock domain, read from the pixel clock domain.
+    // A value changing mid read only affects one pixel of one bar.
     always_ff @(posedge clk) begin
-        if (!sys_rst_n) begin
-            for (int i = 0; i < NUM_BARS; i = i + 1) begin
-                bars[i] <= 8'd0;
-            end
-        end else if (mag_valid) begin
-            bars[bin_idx] <= mag_out;
-        end
+        if (mag_valid) bars[bin_idx] <= mag_out;
     end
 
-
+    always_ff @(posedge clk_pixel) begin
+        bar_level <= bars[bar_addr];
+    end
 
     // single-clock-cycle pulse on first pixel frame entry 
     logic frame_tick;
@@ -124,7 +132,7 @@ module top (
         .MAX_HEIGHT(256)
     ) u_bar_renderer (
         .clk         (clk_pixel),
-        .rst_n       (sys_rst_n),
+        .rst_n       (rst_n_pixel),
         .pixel_x     (pixel_x),
         .pixel_y     (pixel_y),
         .active_video(data_enable),
@@ -139,8 +147,8 @@ module top (
     // Delay video_sync data by two clock cycles to align display data
 
     logic [1:0] hsync_f, vsync_f, data_enable_f;
-    always_ff @(posedge clk_pixel or negedge sys_rst_n) begin
-        if (!sys_rst_n) begin
+    always_ff @(posedge clk_pixel or negedge rst_n_pixel) begin
+        if (!rst_n_pixel) begin
             hsync_f <= 2'b00;
             vsync_f <= 2'b00;
             data_enable_f <= 2'b00;
@@ -156,7 +164,7 @@ module top (
     hdmi_tx u_hdmi_tx (
         .pixel_clk  (clk_pixel),
         .serial_clk (clk_serial),
-        .rst_n      (sys_rst_n),
+        .rst_n      (rst_n_pixel),
         .red        (bar_rgb_data[23:16]),
         .green      (bar_rgb_data[15:8]),
         .blue       (bar_rgb_data[7:0]),

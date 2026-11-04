@@ -14,6 +14,9 @@ RTL_SRCS   := $(filter-out $(PKG_SRCS),$(wildcard src/*.sv))
 SRCS       ?= $(PKG_SRCS) $(RTL_SRCS)
 CST        ?= constraints/tangnano20k.cst
 
+# Timing target for place and route in MHz (fastest clock, the 74.25 MHz pixel clock)
+PNR_FREQ   ?= 74.25
+
 # Testbench selection (e.g. make sim TB=top_tb or make sim TB=video_sync_tb)
 TB         ?= top_tb
 TB_NAME    := $(notdir $(basename $(TB)))
@@ -122,7 +125,7 @@ pnr: $(PNR_JSON)
 
 $(PNR_JSON): $(JSON) $(CST)
 	@echo "==> Running Place & Route with $(PNR)..."
-	$(PNR) --json $(JSON) --write $(PNR_JSON) $(PNR_FLAGS)
+	$(PNR) --json $(JSON) --write $(PNR_JSON) --freq $(PNR_FREQ) $(PNR_FLAGS)
 
 # ------------------------------------------------------------------------------
 # 3. Bitstream Generation (gowin_pack / Apicula)
