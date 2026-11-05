@@ -99,6 +99,8 @@ help:
 	@echo "  make waves       - Open simulation waveforms in GTKWave / Surfer (supports TB=name)"
 	@echo "  make test        - Run regression testbenches ($(TESTS))"
 	@echo "  make format      - Auto-format all SystemVerilog files in src/ and sim/"
+	@echo "  make diagram     - Generate block diagrams for top, fft and bar_renderer ($(DIAGRAM_DIR))"
+	@echo "  make diagram-module MODULE=name - Generate gate-level schematic in $(BUILD_DIR)/"
 	@echo "  make clean       - Clean all build & simulation artifacts"
 	@echo "  make clean-sim   - Clean only simulation artifacts (.vvp, .vcd, logs)"
 	@echo "  make check-tools - Verify toolchain installation status"
@@ -218,6 +220,28 @@ format:
 	@echo "==> Formatting SystemVerilog files with verible-verilog-format..."
 	verible-verilog-format --indentation_spaces=4 --named_port_alignment=align --port_declarations_alignment=flush-left --module_net_variable_alignment=flush-left --inplace src/*.sv sim/*.sv
 	verible-verilog-syntax src/*.sv sim/*.sv
+
+# Block diagrams with square wiring (requires netlistsvg, see README).
+# Small logic in top is grouped into named blocks so only modules are drawn.
+DIAGRAM_DIR ?= docs/images/diagrams
+
+.PHONY: diagram
+diagram: | $(BUILD_DIR)
+	@echo "==> Generating block diagrams in $(DIAGRAM_DIR) with Yosys and netlistsvg..."
+	$(YOSYS) -q -p "read_verilog -sv -nomem2reg $(SRCS); hierarchy -top top; proc; memory_collect; opt_clean; submod -name video_sync_delay top/t:\$$adff; submod -name display_bars top/t:\$$mem_v2 top/t:\$$mux top/t:\$$dff; opt_clean; write_json $(BUILD_DIR)/top_diagram.json"
+	python3 scripts/draw_diagram.py top src/top.sv $(BUILD_DIR)/top_diagram.json $(DIAGRAM_DIR)/top_diagram.svg
+	$(YOSYS) -q -p "read_verilog -sv -nomem2reg src/fft.sv; hierarchy -top fft; proc; memory_collect; opt_clean; write_json $(BUILD_DIR)/fft_diagram.json"
+	python3 scripts/draw_diagram.py fft src/fft.sv $(BUILD_DIR)/fft_diagram.json $(DIAGRAM_DIR)/fft_diagram.svg
+	$(YOSYS) -q -p "read_verilog -sv -nomem2reg src/bar_renderer.sv; hierarchy -top bar_renderer; proc; memory_collect; opt_clean; write_json $(BUILD_DIR)/bar_renderer_diagram.json"
+	python3 scripts/draw_diagram.py bar_renderer src/bar_renderer.sv $(BUILD_DIR)/bar_renderer_diagram.json $(DIAGRAM_DIR)/bar_renderer_diagram.svg
+
+# Gate-level schematic of one module, e.g. make diagram-module MODULE=fft (requires Graphviz)
+MODULE     ?= top
+
+.PHONY: diagram-module
+diagram-module: | $(BUILD_DIR)
+	$(YOSYS) -q -p "read_verilog -sv -nomem2reg $(SRCS); hierarchy -top $(MODULE); proc; memory_collect; opt_clean; show -format svg -prefix $(BUILD_DIR)/$(MODULE)_schematic -notitle -width $(MODULE)"
+	@rm -f $(BUILD_DIR)/$(MODULE)_schematic.dot
 
 # ------------------------------------------------------------------------------
 # 7. Clean Targets

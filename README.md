@@ -3,8 +3,50 @@
 Built for the Tang Nano 20K FPGA development board
 
 <p align="center">
-  <img src="docs/images/display_driver.JPG" alt="Display Driver Demo" width="750" />
+<img src="docs/images/display_driver.JPG" alt="Display Driver Demo" width="1000" />
 </p>
+## Source Files
+
+### Top Level
+- **top.sv**: Top-level FPGA module connecting clocking, reset, the audio path, display bars, rendering, and HDMI output.
+
+<p align="center">
+<img src="docs/images/diagrams/top_diagram.svg" alt="Board Setup" width="1200" />
+</p>
+
+
+### Clocking and Reset
+- **reset_sync.sv**: Asynchronous assert, synchronous deassert reset synchroniser. One instance per clock domain.
+
+### Video Processing
+- **hdmi_clock_gen.sv**
+  - Generates pixel_clk and faster serial_clk for HDMI.  [Gowin Clock User Guide](<docs/gowin/Gowin Clock User Guide.pdf>).
+- **video_sync.sv**
+  - pixel_x, pixel_y: Current screen coordinates (0..1279, 0..719).
+  - de (Data Enable): High (1) inside the visible 1280 × 720 active area.
+  - hsync & vsync: Pulse high (1) during horizontal/vertical sync windows so the monitor can align each row and frame (used by hdmi_tx.sv).
+- **tmds_encoder.sv**
+  - 8b/10b TMDS encoder implemented from [User Guide (Chapter 3)](<docs/gowin/User Guide.pdf>).
+- **hdmi_tx.sv**
+  - Wraps the three TMDS encoders, OSER10 10:1 DDR serializers, and differential output buffers.
+
+### Graphics
+- **bar_renderer.sv**: Pixel multiplexing to draw bar graphics
+
+<p align="center">
+<img src="docs/images/diagrams/bar_renderer_diagram.svg" alt="bar_renderer Block Diagram" width="800" />
+</p>
+
+### Microphone Driver and Signal Processing
+- **i2s_rx.sv**: Driver for I2S microphone. Contains a synchroniser, a clock divider and a shift register.
+- **fft.sv**: 64-point iterative FFT. Streams the magnitude of each of the 32 positive frequency bins to the display bars.
+
+<p align="center">
+<img src="docs/images/diagrams/fft_diagram.svg" alt="fft Block Diagram" width="1200" />
+</p>
+
+### Supplementary
+- **spectrum_pattern_gen.sv**: Synthetic animated bar heights for testing without audio input.
 
 ## Getting Started
 
@@ -50,6 +92,18 @@ make -B pnr 2>&1 | grep -E "Max frequency|ERROR"
 make format
 ```
 
+**Generate Diagrams**
+```bash
+# One time install for the square-wired block diagrams
+npm install -g netlistsvg@1.0.2
+
+# Block diagrams of top, fft and bar_renderer in docs/images/diagrams/
+make diagram
+
+# Detailed gate-level schematic of one module in build/ (requires Graphviz)
+make diagram-module MODULE=fft
+```
+
 **Clean Build Files**
 ```bash
 make clean
@@ -70,23 +124,26 @@ make setup-toolchain
 ```
 
 
-##
 ## Implementation Notes
 
 ### HDMI
-**TMDS encoding (Transition-Minimised Differential Signalling)**: a technology used to transmit high-speed digital video and audio data reliably over cables in interfaces like DVI and HDMI
+**TMDS encoding (Transition-Minimised Differential Signalling)**: A technology used to transmit high-speed digital video and audio data reliably over cables in interfaces like DVI and HDMI.
+
+An HDMI cable does **not** have 10 separate wires for Red, 10 for Green, and 10 for Blue. It only has **1 differential pair per color channel**. To squeeze all **10 bits** of a pixel's TMDS symbol down a single wire before the next pixel arrives, `hdmi_tx.sv` uses a hardware **Parallel-to-Serial converter** (`OSER10` — Output Serializer 10:1 DDR):
+
+$$5\text{ clock cycles per pixel} \times 2\text{ edges per cycle (DDR)} = 10\text{ bits per pixel}$$
+
+$$74.25\text{ MHz} \times 5 = 371.25\text{ MHz} \quad (\text{producing } 742.5\text{ Mbps of serial data})$$
 
 ### Clock Domains
-- **Pixel Clock**:  **74.25** MHz for pixel coordinates and RGB colour values once per pixel
-1650 pixels wide × 750 lines tall × 60 frames/sec = 74,250,000 pixels/sec.
-- **Serial Clock**: 371.25 MHz for 10-bit TMDS encoded colour data over HDMI pins.
-- **Audio Clock**: 27 MHz crystal clock for `i2s_rx.sv`, `fft.sv` and writes to the display bars. The single-cycle FFT butterfly is too slow to share the pixel clock.
+- **Pixel Clock (74.25 MHz)**: Evaluates pixel coordinates and RGB colour values once per pixel:
+  $$1650\text{ pixels wide} \times 750\text{ lines tall} \times 60\text{ frames/sec} = 74,250,000\text{ pixels/sec} = 74.25\text{ MHz}$$
+- **Serial Clock (371.25 MHz)**: Transmits 10-bit TMDS encoded colour data over HDMI pins.
+- **Audio Clock (27 MHz)**: Onboard crystal clock for `i2s_rx.sv`, `fft.sv`, and writes to the display bars. The single-cycle FFT butterfly is too slow to share the pixel clock.
 
-The phase-locked loop generates the serial clock from the 27 MHz crystal, and `CLKDIV` divides it by 5 to generate the pixel clock.
+The Phase-Locked Loop (PLL) generates the 371.25 MHz serial clock from the 27 MHz crystal, and `CLKDIV` divides it by 5 to generate the 74.25 MHz pixel clock.
 
 PLL `LOCK` is asynchronous to every clock, so `top.sv` passes it through one `reset_sync.sv` per clock domain. Reset asserts immediately and releases on a clock edge.
-
-An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for Blue. It only has 1 differential pair per color channel. To squeeze all 10 bits of a pixel's TMDS symbol down a single wire before the next pixel arrives, `hdmi_tx.sv` uses a hardware Parallel-to-Serial converter (`OSER10` — Output Serializer 10:1)
 
 ### Bit width calculation for 720p output display
 - Active Resolution: 1280 × 720 = 921,600 pixels (Total frame with blanking: 1650 × 750 = 1,237,500 pixels)
@@ -96,7 +153,7 @@ An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for 
 ### FFT (64-Point Iterative Radix-2 DIT)
 
 <p align="center">
-  <img src="docs/images/iterative_fft.png" alt="Iterative FFT" width="300" />
+<img src="docs/images/iterative_fft.png" alt="Iterative FFT" width="300" />
 </p>
 
 - **FFT Hardware State Machine**
@@ -108,13 +165,13 @@ An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for 
 ### Pin Diagram from datasheet
 
 <p align="center">
-  <img src="docs/images/pinout.png" alt="Tang Nano 20K Pinout" width="650" />
+<img src="docs/images/pinout.png" alt="Tang Nano 20K Pinout" width="850" />
 </p>
 
 ### FPGA Pins
 
 <p align="center">
-  <img src="docs/images/board_setup.JPG" alt="Board Setup" width="750" />
+<img src="docs/images/board_setup.JPG" alt="Board Setup" width="750" />
 </p>
 
 | INMP441 | Tang Nano 20K |
@@ -125,32 +182,3 @@ An HDMI cable does not have 10 separate wires for Red, 10 for Green, and 10 for 
 | SCK | Pin 27 |
 | WS | Pin 28 |
 | SD | Pin 29 |
-## Source Files
-
-### Clocking and Reset
-- **reset_sync.sv**: Asynchronous assert, synchronous deassert reset synchroniser. One instance per clock domain.
-
-### Video Processing
-- **hdmi_clock_gen.sv**
-  - Generates pixel_clk and faster serial_clk for HDMI.  [Gowin Clock User Guide](<docs/gowin/Gowin Clock User Guide.pdf>).
-- **video_sync.sv**
-  - pixel_x, pixel_y: Current screen coordinates (0..1279, 0..719).
-  - de (Data Enable): High (1) inside the visible 1280 × 720 active area.
-  - hsync & vsync: Pulse high (1) during horizontal/vertical sync windows so the monitor can align each row and frame (used by hdmi_tx.sv).
-- **tmds_encoder.sv**
-  - 8b/10b TMDS encoder implemented from [User Guide (Chapter 3)](<docs/gowin/User Guide.pdf>).
-- **hdmi_tx.sv**
-  - Wraps the three TMDS encoders, OSER10 10:1 DDR serializers, and differential output buffers.
-
-### Graphics
-- **bar_renderer.sv**: Pixel multiplexing to draw bar graphics
-
-### Microphone Driver and Signal Processing
-- **i2s_rx.sv**: Driver for I2S microphone. Contains a synchroniser, a clock divider and a shift register.
-- **fft.sv**: 64-point iterative FFT. Streams the magnitude of each of the 32 positive frequency bins to the display bars.
-
-### Top Level
-- **top.sv**: Top-level FPGA module connecting clocking, reset, the audio path, display bars, rendering, and HDMI output.
-
-### Supplementary
-- **spectrum_pattern_gen.sv**: Synthetic animated bar heights for testing without audio input.
